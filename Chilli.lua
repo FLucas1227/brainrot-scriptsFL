@@ -1,8 +1,8 @@
 --[[
-  Painel: BrainFL Panel
-  Jogo: Roube um Brainrot [Roblox]
-  Funções: Roubo automático com teleport, auto compra com filtro, anti stun, roubo massivo,
-           ajustes de velocidade e pulo, aimbot, ver invisíveis, menu toggle
+Painel: BrainFL Panel
+Jogo: Roube um Brainrot [Roblox]
+Funções: Roubo automático com teleport, auto compra com filtro, anti stun, roubo massivo,
+         ajustes de velocidade e pulo, aimbot, ver invisíveis, menu toggle
 ]]
 
 -- Carregar biblioteca OrionLib
@@ -16,66 +16,30 @@ local Window = OrionLib:MakeWindow({
     ConfigFolder = "BrainFL_Config"
 })
 
--- Variáveis principais
 local plr = game.Players.LocalPlayer
 local hum = plr.Character and plr.Character:WaitForChild("Humanoid")
 local hrp = plr.Character and plr.Character:WaitForChild("HumanoidRootPart")
-local teleportBaseCFrame = CFrame.new(0, 0, 0) -- Substituir pela sua base se souber
 
--- Menu toggle
-OrionLib:Init()
+-- Auto Steal com teleport
+local function FLBOLADO()
+    local stealing = true
+    local noclipConn
 
--- Aba: Jogabilidade
-local jogabilidadeTab = Window:MakeTab({
-    Name = "🎮 Jogabilidade",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+    noclipConn = game:GetService("RunService").Stepped:Connect(function()
+        if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            plr.Character.Humanoid:ChangeState(11)
+        end
+    end)
 
-jogabilidadeTab:AddSlider({
-    Name = "Velocidade",
-    Min = 16,
-    Max = 120,
-    Default = 16,
-    Increment = 1,
-    ValueName = "Vel",
-    Callback = function(val)
-        if hum then hum.WalkSpeed = val end
-    end
-})
-
-jogabilidadeTab:AddSlider({
-    Name = "Altura do Pulo",
-    Min = 50,
-    Max = 200,
-    Default = 50,
-    Increment = 1,
-    ValueName = "Pulo",
-    Callback = function(val)
-        if hum then hum.JumpPower = val end
-    end
-})
-
--- Aba: Roubo
-local rouboTab = Window:MakeTab({
-    Name = "💸 Roubo",
-    Icon = "rbxassetid://6031075931",
-    PremiumOnly = false
-})
-
-local stealing = false
-
-rouboTab:AddToggle({
-    Name = "Auto Roubar + Teleport",
-    Default = false,
-    Callback = function(val)
-        stealing = val
-        while stealing do
-            task.wait()
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("Part") and obj.Name == "Brainrot" then
-                    local target = obj.CFrame
-                    hrp.CFrame = target + Vector3.new(0, 2, 0)
+    while stealing do
+        task.wait(1)
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Part") and obj.Name == "Brainrot" then
+                local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local old = hrp.CFrame
+                    hrp.CFrame = obj.CFrame + Vector3.new(0, 2, 0)
+                    task.wait(0.2)
                     for _, c in ipairs(obj:GetChildren()) do
                         if c:IsA("TouchTransmitter") then
                             firetouchinterest(hrp, obj, 0)
@@ -84,99 +48,63 @@ rouboTab:AddToggle({
                         end
                     end
                     task.wait(0.1)
-                    hrp.CFrame = teleportBaseCFrame
+                    hrp.CFrame = old
+
+                    -- Teleport para base
+                    local base = workspace:FindFirstChild("Base_" .. plr.Name)
+                    if base then
+                        hrp.CFrame = base.CFrame + Vector3.new(0, 3, 0)
+                    end
                 end
             end
         end
     end
-})
 
--- Aba: Auto Compra
-local compraTab = Window:MakeTab({
-    Name = "🛒 Auto Compra",
-    Icon = "rbxassetid://6031265976",
-    PremiumOnly = false
-})
+    noclipConn:Disconnect()
+end
 
-local raridadeEscolhida = "Secreto"
-
-compraTab:AddDropdown({
-    Name = "Escolher raridade",
-    Default = "Secreto",
-    Options = {"Comum", "Raro", "Épico", "Lendário", "Secreto"},
-    Callback = function(val)
-        raridadeEscolhida = val
-    end
-})
-
-compraTab:AddToggle({
-    Name = "Comprar automaticamente",
-    Default = false,
-    Callback = function(val)
-        while val do
-            task.wait(1)
-            local evento = game:GetService("ReplicatedStorage").Remotes:FindFirstChild("BuyBrainrot")
-            if evento then evento:FireServer(raridadeEscolhida) end
-        end
-    end
-})
-
--- Aba: Anti-Stun
-local defesaTab = Window:MakeTab({
-    Name = "🛡 Anti-Stun",
-    Icon = "rbxassetid://6035047409",
-    PremiumOnly = false
-})
-
-defesaTab:AddButton({
-    Name = "Ativar Anti-Stun",
-    Callback = function()
-        plr.Character.Humanoid.BreakJointsOnDeath = false
-        plr.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-        plr.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-        plr.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-    end
-})
-
--- Aba: Visual
-local visualTab = Window:MakeTab({
-    Name = "🕵️ Visual",
-    Icon = "rbxassetid://6031763426",
-    PremiumOnly = false
-})
-
-visualTab:AddButton({
-    Name = "Ver jogadores invisíveis",
-    Callback = function()
-        for _, p in ipairs(game.Players:GetPlayers()) do
-            if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local esp = Instance.new("Highlight")
-                esp.Adornee = p.Character
-                esp.FillColor = Color3.new(1, 0, 0)
-                esp.FillTransparency = 0.5
-                esp.OutlineColor = Color3.new(0, 0, 0)
-                esp.OutlineTransparency = 0
-                esp.Parent = p.Character
+-- Auto Buy com filtro de raridade
+local function autoBuy(raridade)
+    while true do
+        task.wait(2)
+        for _, btn in ipairs(workspace:GetDescendants()) do
+            if btn:IsA("ClickDetector") and btn.Parent and btn.Parent.Name:lower():find(raridade:lower()) then
+                fireclickdetector(btn)
             end
         end
     end
-})
+end
 
--- Aimbot (simples)
-rouboTab:AddToggle({
-    Name = "Aimbot",
-    Default = false,
-    Callback = function(val)
-        if val then
-            getgenv().aimbotConnection = game:GetService("RunService").RenderStepped:Connect(function()
-                local mouse = plr:GetMouse()
-                local target = mouse.Target
-                if target and target:IsDescendantOf(workspace) then
-                    mouse.Icon = "rbxassetid://6031154879"
-                end
-            end)
-        else
-            if getgenv().aimbotConnection then getgenv().aimbotConnection:Disconnect() end
+-- Anti Stun
+local function antiStun()
+    plr.Character.Humanoid.StateChanged:Connect(function(_, newState)
+        if newState == Enum.HumanoidStateType.Physics or newState == Enum.HumanoidStateType.Ragdoll then
+            plr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
         end
-    end
-})
+    end)
+end
+
+-- Ajuste de velocidade e pulo
+local function ajustarMovimento(speed, jump)
+    plr.Character.Humanoid.WalkSpeed = speed
+    plr.Character.Humanoid.JumpPower = jump
+end
+
+-- Roubo massivo (sem delay)
+local function rouboInstantaneo()
+    local old = hookmetamethod(game, "__namecall", function(...)
+        local args = {...}
+        if getnamecallmethod() == "FireServer" and tostring(args[1]) == "Steal" then
+            return true
+        end
+        return old(...)
+    end)
+end
+
+-- Aimbot simples
+local function enableAimbot()
+    local RunService = game:GetService("RunService")
+    RunService.Stepped:Connect(function()
+        local closest = nil
+        local shortest = math.huge
+        for _, player in ipairs(game.Players:GetP_
